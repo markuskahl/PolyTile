@@ -7,7 +7,103 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLabel, QSpinBox, 
                              QFileDialog, QGraphicsScene, QGraphicsView, QMessageBox)
 from PyQt6.QtGui import QPixmap, QImage, QPen, QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QLocale
+
+TRANSLATIONS = {
+    "de": {
+        "window_title": "PolyTile",
+        "load_tileset": "1. Tileset laden",
+        "grid_settings": "\nGrid-Einstellungen (Pixel):",
+        "width": "Breite:",
+        "height": "Höhe:",
+        "algo_settings": "\nAlgorithmus-Feinjustierung:",
+        "alpha_limit": "Alpha-Limit (0-255):",
+        "generate_polygons": "2. Polygone generieren",
+        "export_json": "3. Als JSON exportieren",
+        "controls": "\nSteuerung im Viewer:",
+        "controls_desc": "• Mausrad: Zoom In/Out\n• Rechte Maus halten: Bild verschieben",
+        "please_load": "\nBitte ein Bild laden...",
+        "open_tileset": "Tileset öffnen",
+        "images_filter": "Bilder (*.png)",
+        "error": "Fehler",
+        "error_no_alpha": "Das Bild konnte nicht geladen werden oder besitzt keinen Alpha-Kanal (Transparenz)!",
+        "image_loaded": "Bild geladen: {width}x{height}px\nRaster: {cols}x{rows} Frames.",
+        "generation_done": "Generierung fertig!\nIn {detected_count} von {frame_counter} Frames wurden Boxen gefunden.",
+        "export_json_title": "JSON exportieren",
+        "success": "Erfolg",
+        "success_msg": "Datei erfolgreich gespeichert unter:\n{file_path}"
+    },
+    "en": {
+        "window_title": "PolyTile",
+        "load_tileset": "1. Load Tileset",
+        "grid_settings": "\nGrid Settings (Pixels):",
+        "width": "Width:",
+        "height": "Height:",
+        "algo_settings": "\nAlgorithm Fine-Tuning:",
+        "alpha_limit": "Alpha Limit (0-255):",
+        "generate_polygons": "2. Generate Polygons",
+        "export_json": "3. Export as JSON",
+        "controls": "\nControls in Viewer:",
+        "controls_desc": "• Scroll wheel: Zoom In/Out\n• Hold right click: Move image",
+        "please_load": "\nPlease load an image...",
+        "open_tileset": "Open Tileset",
+        "images_filter": "Images (*.png)",
+        "error": "Error",
+        "error_no_alpha": "The image could not be loaded or does not have an alpha channel (transparency)!",
+        "image_loaded": "Image loaded: {width}x{height}px\nGrid: {cols}x{rows} Frames.",
+        "generation_done": "Generation finished!\nBoxes found in {detected_count} of {frame_counter} frames.",
+        "export_json_title": "Export JSON",
+        "success": "Success",
+        "success_msg": "File successfully saved at:\n{file_path}"
+    },
+    "fr": {
+        "window_title": "PolyTile",
+        "load_tileset": "1. Charger le tileset",
+        "grid_settings": "\nParamètres de la grille (Pixels) :",
+        "width": "Largeur :",
+        "height": "Hauteur :",
+        "algo_settings": "\nAjustement de l'algorithme :",
+        "alpha_limit": "Limite alpha (0-255) :",
+        "generate_polygons": "2. Générer les polygones",
+        "export_json": "3. Exporter en JSON",
+        "controls": "\nCommandes du visualiseur :",
+        "controls_desc": "• Molette : Zoom avant/arrière\n• Clic droit maintenu : Déplacer l'image",
+        "please_load": "\nVeuillez charger une image...",
+        "open_tileset": "Ouvrir le tileset",
+        "images_filter": "Images (*.png)",
+        "error": "Erreur",
+        "error_no_alpha": "L'image n'a pas pu être chargée ou ne possède pas de canal alpha (transparence) !",
+        "image_loaded": "Image chargée : {width}x{height}px\nGrille : {cols}x{rows} frames.",
+        "generation_done": "Génération terminée !\nDes boîtes ont été trouvées dans {detected_count} de {frame_counter} frames.",
+        "export_json_title": "Exporter en JSON",
+        "success": "Succès",
+        "success_msg": "Fichier enregistré avec succès sous :\n{file_path}"
+    },
+    "es": {
+        "window_title": "PolyTile",
+        "load_tileset": "1. Cargar tileset",
+        "grid_settings": "\nAjustes de cuadrícula (Píxeles):",
+        "width": "Ancho:",
+        "height": "Alto:",
+        "algo_settings": "\nAjuste del algoritmo:",
+        "alpha_limit": "Límite alfa (0-255):",
+        "generate_polygons": "2. Generar polígonos",
+        "export_json": "3. Exportar como JSON",
+        "controls": "\nControles en el visor:",
+        "controls_desc": "• Rueda del ratón: Zoom +/-\n• Mantener clic derecho: Mover imagen",
+        "please_load": "\nPor favor, cargue una imagen...",
+        "open_tileset": "Abrir tileset",
+        "images_filter": "Imágenes (*.png)",
+        "error": "Error",
+        "error_no_alpha": "¡No se pudo cargar la imagen o no tiene canal alfa (transparencia)!",
+        "image_loaded": "Imagen cargada: {width}x{height}px\nCuadrícula: {cols}x{rows} frames.",
+        "generation_done": "¡Generación finalizada!\nSe encontraron cajas en {detected_count} de {frame_counter} frames.",
+        "export_json_title": "Exportar JSON",
+        "success": "Éxito",
+        "success_msg": "Archivo guardado con éxito en:\n{file_path}"
+    }
+}
+
 
 class ZoomableGraphicsView(QGraphicsView):
     """ Eine angepasste QGraphicsView, die Zoom und Panning unterstützt """
@@ -41,7 +137,13 @@ class ZoomableGraphicsView(QGraphicsView):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PolyTile")
+        
+        # Sprache erkennen (Standard: Englisch)
+        system_lang = QLocale.system().name()[:2].lower()
+        system_lang = os.environ.get("POLYT_LANG", system_lang).lower()
+        self.lang = system_lang if system_lang in TRANSLATIONS else "en"
+
+        self.setWindowTitle(self.t("window_title"))
         self.setGeometry(100, 100, 1024, 768)
 
         # Status-Variablen
@@ -51,6 +153,13 @@ class MainWindow(QMainWindow):
 
         self.init_ui()
 
+    def t(self, key, **kwargs):
+        """ Übersetzungs-Hilfe """
+        text = TRANSLATIONS[self.lang].get(key, key)
+        if kwargs:
+            return text.format(**kwargs)
+        return text
+
     def init_ui(self):
         main_layout = QHBoxLayout()
 
@@ -58,56 +167,56 @@ class MainWindow(QMainWindow):
         control_panel = QVBoxLayout()
         control_panel.setAlignment(Qt.AlignmentFlag.AlignTop)
         
-        self.btn_load = QPushButton("1. Tileset laden")
+        self.btn_load = QPushButton(self.t("load_tileset"))
         self.btn_load.clicked.connect(self.load_image)
         control_panel.addWidget(self.btn_load)
         
-        control_panel.addWidget(QLabel("\nGrid-Einstellungen (Pixel):"))
+        control_panel.addWidget(QLabel(self.t("grid_settings")))
         
         hbox_w = QHBoxLayout()
-        hbox_w.addWidget(QLabel("Breite:"))
+        hbox_w.addWidget(QLabel(self.t("width")))
         self.spin_width = QSpinBox()
         self.spin_width.setRange(4, 512)
-        self.spin_width.setValue(32)
+        self.spin_width.setValue(16)
         self.spin_width.valueChanged.connect(self.draw_grid_and_preview)
         hbox_w.addWidget(self.spin_width)
         control_panel.addLayout(hbox_w)
 
         hbox_h = QHBoxLayout()
-        hbox_h.addWidget(QLabel("Höhe:"))
+        hbox_h.addWidget(QLabel(self.t("height")))
         self.spin_height = QSpinBox()
         self.spin_height.setRange(4, 512)
-        self.spin_height.setValue(32)
+        self.spin_height.setValue(16)
         self.spin_height.valueChanged.connect(self.draw_grid_and_preview)
         hbox_h.addWidget(self.spin_height)
         control_panel.addLayout(hbox_h)
 
-        control_panel.addWidget(QLabel("\nAlgorithmus-Feinjustierung:"))
+        control_panel.addWidget(QLabel(self.t("algo_settings")))
         
         hbox_t = QHBoxLayout()
-        hbox_t.addWidget(QLabel("Alpha-Limit (0-255):"))
+        hbox_t.addWidget(QLabel(self.t("alpha_limit")))
         self.spin_thresh = QSpinBox()
         self.spin_thresh.setRange(0, 255)
         self.spin_thresh.setValue(10)
         hbox_t.addWidget(self.spin_thresh)
         control_panel.addLayout(hbox_t)
 
-        self.btn_generate = QPushButton("2. Polygone generieren")
+        self.btn_generate = QPushButton(self.t("generate_polygons"))
         self.btn_generate.setStyleSheet("background-color: #2b579a; color: white; font-weight: bold;")
         self.btn_generate.clicked.connect(self.generate_polygons)
         self.btn_generate.setEnabled(False)
         control_panel.addWidget(self.btn_generate)
 
-        self.btn_export = QPushButton("3. Als JSON exportieren")
+        self.btn_export = QPushButton(self.t("export_json"))
         self.btn_export.setStyleSheet("background-color: #1e7145; color: white; font-weight: bold;")
         self.btn_export.clicked.connect(self.export_to_json)
         self.btn_export.setEnabled(False)
         control_panel.addWidget(self.btn_export)
 
-        control_panel.addWidget(QLabel("\nSteuerung im Viewer:"))
-        control_panel.addWidget(QLabel("• Mausrad: Zoom In/Out\n• Rechte Maus halten: Bild verschieben"))
+        control_panel.addWidget(QLabel(self.t("controls")))
+        control_panel.addWidget(QLabel(self.t("controls_desc")))
 
-        self.lbl_info = QLabel("\nBitte ein Bild laden...")
+        self.lbl_info = QLabel(self.t("please_load"))
         self.lbl_info.setWordWrap(True)
         control_panel.addWidget(self.lbl_info)
 
@@ -128,7 +237,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
     def load_image(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Tileset öffnen", "", "Bilder (*.png)")
+        file_path, _ = QFileDialog.getOpenFileName(self, self.t("open_tileset"), "", self.t("images_filter"))
         if not file_path:
             return
 
@@ -136,7 +245,7 @@ class MainWindow(QMainWindow):
         self.cv_img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
 
         if self.cv_img is None or self.cv_img.shape[2] < 4:
-            QMessageBox.critical(self, "Fehler", "Das Bild konnte nicht geladen werden oder besitzt keinen Alpha-Kanal (Transparenz)!")
+            QMessageBox.critical(self, self.t("error"), self.t("error_no_alpha"))
             return
 
         self.btn_generate.setEnabled(True)
@@ -173,7 +282,7 @@ class MainWindow(QMainWindow):
         for y in range(0, height, tile_h):
             self.scene.addLine(0, y, width, y, grid_pen)
 
-        self.lbl_info.setText(f"Bild geladen: {width}x{height}px\nRaster: {width//tile_w}x{height//tile_h} Frames.")
+        self.lbl_info.setText(self.t("image_loaded", width=width, height=height, cols=width//tile_w, rows=height//tile_h))
 
     def generate_polygons(self):
         if self.cv_img is None:
@@ -243,19 +352,19 @@ class MainWindow(QMainWindow):
                 frame_counter += 1
 
         self.btn_export.setEnabled(True)
-        self.lbl_info.setText(f"Generierung fertig!\nIn {detected_count} von {frame_counter} Frames wurden Boxen gefunden.")
+        self.lbl_info.setText(self.t("generation_done", detected_count=detected_count, frame_counter=frame_counter))
 
     def export_to_json(self):
         if not self.polygon_data:
             return
 
         default_name = os.path.splitext(self.image_path)[0] + "_collision.json"
-        file_path, _ = QFileDialog.getSaveFileName(self, "JSON exportieren", default_name, "JSON Files (*.json)")
+        file_path, _ = QFileDialog.getSaveFileName(self, self.t("export_json_title"), default_name, "JSON Files (*.json)")
         
         if file_path:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(self.polygon_data, f, indent=4)
-            QMessageBox.information(self, "Erfolg", f"Datei erfolgreich gespeichert unter:\n{file_path}")
+            QMessageBox.information(self, self.t("success"), self.t("success_msg", file_path=file_path))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
