@@ -42,12 +42,12 @@ Make sure you have Python 3.8+ installed.
    ```bash
    python app.py
    ```
-2. **Load a Tileset:** Click on **1. Tileset laden** and select a PNG image with transparency.
+2. **Load a Tileset:** Click on **1. Load Tileset** and select a PNG image with transparency.
 3. **Configure Grid & Threshold:**
-   - Adjust **Breite** (Width) and **Höhe** (Height) in pixels to match your tiles.
-   - Adjust the **Alpha-Limit** threshold (0 to 255) for contour detection.
-4. **Generate Polygons:** Click on **2. Polygone generieren** to compute and preview the collision outlines (shown in green).
-5. **Export to JSON:** Click on **3. Als JSON exportieren** to save the collision data.
+   - Adjust **Width** and **Height** in pixels to match your tiles.
+   - Adjust the **Alpha Limit** threshold (0 to 255) for contour detection.
+4. **Generate Polygons:** Click on **2. Generate Polygons** to compute and preview the collision outlines (shown in green).
+5. **Export to JSON:** Click on **3. Export as JSON** to save the collision data.
 
 ---
 

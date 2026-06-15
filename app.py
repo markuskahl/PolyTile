@@ -106,18 +106,18 @@ TRANSLATIONS = {
 
 
 class ZoomableGraphicsView(QGraphicsView):
-    """ Eine angepasste QGraphicsView, die Zoom und Panning unterstützt """
+    """ A custom QGraphicsView that supports zoom and panning """
     def __init__(self, scene):
         super().__init__(scene)
-        # Die fehlerhafte QImage-Zeile wurde hier restlos entfernt!
+        # The buggy QImage line was completely removed here!
         
-        # Erlaubt das Verschieben des Bildes mit der Hand (Mausrad gedrückt halten / rechte Maustaste)
+        # Allows panning the image with the hand (holding mouse wheel / right mouse button)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
     def wheelEvent(self, event):
-        """ Fängt das Mausrad ab, um pixelgenau zu zoomen """
+        """ Intercepts the scroll wheel to zoom pixel-precisely """
         zoom_factor = 1.15
         if event.angleDelta().y() > 0:
             self.scale(zoom_factor, zoom_factor)
@@ -125,7 +125,7 @@ class ZoomableGraphicsView(QGraphicsView):
             self.scale(1.0 / zoom_factor, 1.0 / zoom_factor)
 
     def mousePressEvent(self, event):
-        """ Erlaubt Panning mit rechter Maustaste, blockiert nicht das normale Klicken """
+        """ Allows panning with the right mouse button, without blocking normal clicks """
         if event.button() == Qt.MouseButton.RightButton:
             release_event = event.__class__(event.type(), event.position(), event.globalPosition(),
                                             Qt.MouseButton.LeftButton, event.buttons() | Qt.MouseButton.LeftButton,
@@ -138,7 +138,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
-        # Sprache erkennen (Standard: Englisch)
+        # Detect language (default: English)
         system_lang = QLocale.system().name()[:2].lower()
         system_lang = os.environ.get("POLYT_LANG", system_lang).lower()
         self.lang = system_lang if system_lang in TRANSLATIONS else "en"
@@ -146,7 +146,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(self.t("window_title"))
         self.setGeometry(100, 100, 1024, 768)
 
-        # Status-Variablen
+        # Status variables
         self.image_path = None
         self.cv_img = None
         self.polygon_data = None
@@ -154,7 +154,7 @@ class MainWindow(QMainWindow):
         self.init_ui()
 
     def t(self, key, **kwargs):
-        """ Übersetzungs-Hilfe """
+        """ Translation helper """
         text = TRANSLATIONS[self.lang].get(key, key)
         if kwargs:
             return text.format(**kwargs)
@@ -163,7 +163,7 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         main_layout = QHBoxLayout()
 
-        # --- LINKE SEITE: KONTROLL-PANEL ---
+        # --- LEFT SIDE: CONTROL PANEL ---
         control_panel = QVBoxLayout()
         control_panel.setAlignment(Qt.AlignmentFlag.AlignTop)
         
@@ -220,11 +220,11 @@ class MainWindow(QMainWindow):
         self.lbl_info.setWordWrap(True)
         control_panel.addWidget(self.lbl_info)
 
-        # --- RECHTE SEITE: GRAFIK-ANSICHT ---
+        # --- RIGHT SIDE: GRAPHICS VIEW ---
         self.scene = QGraphicsScene()
         self.view = ZoomableGraphicsView(self.scene)
 
-        # Zusammenfügen
+        # Assemble layouts
         control_widget = QWidget()
         control_widget.setLayout(control_panel)
         control_widget.setFixedWidth(220)
