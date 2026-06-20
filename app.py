@@ -27,6 +27,7 @@ TRANSLATIONS = {
         "images_filter": "Bilder (*.png)",
         "error": "Fehler",
         "error_no_alpha": "Das Bild konnte nicht geladen werden oder besitzt keinen Alpha-Kanal (Transparenz)!",
+        "error_save_failed": "Datei konnte nicht gespeichert werden:\n{error}",
         "image_loaded": "Bild geladen: {width}x{height}px\nRaster: {cols}x{rows} Frames.",
         "generation_done": "Generierung fertig!\nIn {detected_count} von {frame_counter} Frames wurden Boxen gefunden.",
         "export_json_title": "JSON exportieren",
@@ -50,8 +51,9 @@ TRANSLATIONS = {
         "images_filter": "Images (*.png)",
         "error": "Error",
         "error_no_alpha": "The image could not be loaded or does not have an alpha channel (transparency)!",
+        "error_save_failed": "Failed to save file:\n{error}",
         "image_loaded": "Image loaded: {width}x{height}px\nGrid: {cols}x{rows} Frames.",
-        "generation_done": "Generation finished!\nBoxes found in {detected_count} of {frame_counter} frames.",
+        "generation_done": "Boxes found in {detected_count} of {frame_counter} frames.",
         "export_json_title": "Export JSON",
         "success": "Success",
         "success_msg": "File successfully saved at:\n{file_path}"
@@ -73,6 +75,7 @@ TRANSLATIONS = {
         "images_filter": "Images (*.png)",
         "error": "Erreur",
         "error_no_alpha": "L'image n'a pas pu être chargée ou ne possède pas de canal alpha (transparence) !",
+        "error_save_failed": "Impossible d'enregistrer le fichier :\n{error}",
         "image_loaded": "Image chargée : {width}x{height}px\nGrille : {cols}x{rows} frames.",
         "generation_done": "Génération terminée !\nDes boîtes ont été trouvées dans {detected_count} de {frame_counter} frames.",
         "export_json_title": "Exporter en JSON",
@@ -96,6 +99,7 @@ TRANSLATIONS = {
         "images_filter": "Imágenes (*.png)",
         "error": "Error",
         "error_no_alpha": "¡No se pudo cargar la imagen o no tiene canal alfa (transparencia)!",
+        "error_save_failed": "No se pudo guardar el archivo:\n{error}",
         "image_loaded": "Imagen cargada: {width}x{height}px\nCuadrícula: {cols}x{rows} frames.",
         "generation_done": "¡Generación finalizada!\nSe encontraron cajas en {detected_count} de {frame_counter} frames.",
         "export_json_title": "Exportar JSON",
@@ -117,22 +121,35 @@ class ZoomableGraphicsView(QGraphicsView):
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
     def wheelEvent(self, event):
-        """ Intercepts the scroll wheel to zoom pixel-precisely """
+        """ Intercepts the scroll wheel to zoom pixel-precisely, with limits """
         zoom_factor = 1.15
+        current_zoom = self.transform().m11()
         if event.angleDelta().y() > 0:
-            self.scale(zoom_factor, zoom_factor)
+            if current_zoom < 50.0:
+                self.scale(zoom_factor, zoom_factor)
         else:
-            self.scale(1.0 / zoom_factor, 1.0 / zoom_factor)
+            if current_zoom > 0.1:
+                self.scale(1.0 / zoom_factor, 1.0 / zoom_factor)
 
     def mousePressEvent(self, event):
         """ Allows panning with the right mouse button, without blocking normal clicks """
         if event.button() == Qt.MouseButton.RightButton:
-            release_event = event.__class__(event.type(), event.position(), event.globalPosition(),
-                                            Qt.MouseButton.LeftButton, event.buttons() | Qt.MouseButton.LeftButton,
-                                            event.modifiers())
-            super().mousePressEvent(release_event)
+            press_event = event.__class__(event.type(), event.position(), event.globalPosition(),
+                                          Qt.MouseButton.LeftButton, event.buttons() | Qt.MouseButton.LeftButton,
+                                          event.modifiers())
+            super().mousePressEvent(press_event)
         else:
             super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """ Stops panning when the right mouse button is released """
+        if event.button() == Qt.MouseButton.RightButton:
+            release_event = event.__class__(event.type(), event.position(), event.globalPosition(),
+                                            Qt.MouseButton.LeftButton, event.buttons() & ~Qt.MouseButton.LeftButton,
+                                            event.modifiers())
+            super().mouseReleaseEvent(release_event)
+        else:
+            super().mouseReleaseEvent(event)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -241,12 +258,14 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
-        self.image_path = file_path
-        self.cv_img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
+        img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
 
-        if self.cv_img is None or self.cv_img.shape[2] < 4:
+        if img is None or len(img.shape) < 3 or img.shape[2] < 4:
             QMessageBox.critical(self, self.t("error"), self.t("error_no_alpha"))
             return
+
+        self.image_path = file_path
+        self.cv_img = img
 
         self.btn_generate.setEnabled(True)
         self.btn_export.setEnabled(False)
@@ -258,6 +277,9 @@ class MainWindow(QMainWindow):
     def draw_grid_and_preview(self):
         if self.cv_img is None:
             return
+
+        self.btn_export.setEnabled(False)
+        self.polygon_data = None
 
         self.scene.clear()
 
@@ -294,7 +316,7 @@ class MainWindow(QMainWindow):
         tile_height = self.spin_height.value()
         alpha_thresh = self.spin_thresh.value()
 
-        img_height, img_width, _ = self.cv_img.shape
+        img_height, img_width = self.cv_img.shape[:2]
         cols = img_width // tile_width
         rows = img_height // tile_height
 
@@ -331,7 +353,7 @@ class MainWindow(QMainWindow):
                         x, y = point[0]
                         polygon_points.append([int(x), int(y)])
 
-                    if polygon_points:
+                    if len(polygon_points) >= 3:
                         self.polygon_data["frames"].append({
                             "frame_id": frame_counter,
                             "grid_position": {"row": r, "col": c},
@@ -362,9 +384,12 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getSaveFileName(self, self.t("export_json_title"), default_name, "JSON Files (*.json)")
         
         if file_path:
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(self.polygon_data, f, indent=4)
-            QMessageBox.information(self, self.t("success"), self.t("success_msg", file_path=file_path))
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump(self.polygon_data, f, indent=4)
+                QMessageBox.information(self, self.t("success"), self.t("success_msg", file_path=file_path))
+            except Exception as e:
+                QMessageBox.critical(self, self.t("error"), self.t("error_save_failed", error=str(e)))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
