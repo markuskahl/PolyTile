@@ -16,6 +16,8 @@ TRANSLATIONS = {
         "grid_settings": "\nGrid-Einstellungen (Pixel):",
         "width": "Breite:",
         "height": "Höhe:",
+        "margin": "Seitenabstand (Margin):",
+        "spacing": "Abstand (Spacing):",
         "algo_settings": "\nAlgorithmus-Feinjustierung:",
         "alpha_limit": "Alpha-Limit (0-255):",
         "generate_polygons": "2. Polygone generieren",
@@ -40,6 +42,8 @@ TRANSLATIONS = {
         "grid_settings": "\nGrid Settings (Pixels):",
         "width": "Width:",
         "height": "Height:",
+        "margin": "Margin:",
+        "spacing": "Spacing:",
         "algo_settings": "\nAlgorithm Fine-Tuning:",
         "alpha_limit": "Alpha Limit (0-255):",
         "generate_polygons": "2. Generate Polygons",
@@ -64,6 +68,8 @@ TRANSLATIONS = {
         "grid_settings": "\nParamètres de la grille (Pixels) :",
         "width": "Largeur :",
         "height": "Hauteur :",
+        "margin": "Marge :",
+        "spacing": "Espacement :",
         "algo_settings": "\nAjustement de l'algorithme :",
         "alpha_limit": "Limite alpha (0-255) :",
         "generate_polygons": "2. Générer les polygones",
@@ -88,6 +94,8 @@ TRANSLATIONS = {
         "grid_settings": "\nAjustes de cuadrícula (Píxeles):",
         "width": "Ancho:",
         "height": "Alto:",
+        "margin": "Margen:",
+        "spacing": "Espaciado:",
         "algo_settings": "\nAjuste del algoritmo:",
         "alpha_limit": "Límite alfa (0-255):",
         "generate_polygons": "2. Generar polígonos",
@@ -208,6 +216,24 @@ class MainWindow(QMainWindow):
         hbox_h.addWidget(self.spin_height)
         control_panel.addLayout(hbox_h)
 
+        hbox_margin = QHBoxLayout()
+        hbox_margin.addWidget(QLabel(self.t("margin")))
+        self.spin_margin = QSpinBox()
+        self.spin_margin.setRange(0, 128)
+        self.spin_margin.setValue(0)
+        self.spin_margin.valueChanged.connect(self.draw_grid_and_preview)
+        hbox_margin.addWidget(self.spin_margin)
+        control_panel.addLayout(hbox_margin)
+
+        hbox_spacing = QHBoxLayout()
+        hbox_spacing.addWidget(QLabel(self.t("spacing")))
+        self.spin_spacing = QSpinBox()
+        self.spin_spacing.setRange(0, 128)
+        self.spin_spacing.setValue(0)
+        self.spin_spacing.valueChanged.connect(self.draw_grid_and_preview)
+        hbox_spacing.addWidget(self.spin_spacing)
+        control_panel.addLayout(hbox_spacing)
+
         control_panel.addWidget(QLabel(self.t("algo_settings")))
         
         hbox_t = QHBoxLayout()
@@ -244,7 +270,7 @@ class MainWindow(QMainWindow):
         # Assemble layouts
         control_widget = QWidget()
         control_widget.setLayout(control_panel)
-        control_widget.setFixedWidth(220)
+        control_widget.setFixedWidth(260)
 
         main_layout.addWidget(control_widget)
         main_layout.addWidget(self.view)
@@ -294,17 +320,23 @@ class MainWindow(QMainWindow):
 
         tile_w = self.spin_width.value()
         tile_h = self.spin_height.value()
+        margin = self.spin_margin.value()
+        spacing = self.spin_spacing.value()
         
         grid_pen = QPen(QColor(255, 0, 0, 100))
         grid_pen.setWidth(1)
         grid_pen.setStyle(Qt.PenStyle.DashLine)
 
-        for x in range(0, width, tile_w):
-            self.scene.addLine(x, 0, x, height, grid_pen)
-        for y in range(0, height, tile_h):
-            self.scene.addLine(0, y, width, y, grid_pen)
+        cols = max(0, (width - margin + spacing) // (tile_w + spacing)) if (tile_w + spacing) > 0 else 0
+        rows = max(0, (height - margin + spacing) // (tile_h + spacing)) if (tile_h + spacing) > 0 else 0
 
-        self.lbl_info.setText(self.t("image_loaded", width=width, height=height, cols=width//tile_w, rows=height//tile_h))
+        for r in range(rows):
+            for c in range(cols):
+                start_x = margin + c * (tile_w + spacing)
+                start_y = margin + r * (tile_h + spacing)
+                self.scene.addRect(start_x, start_y, tile_w, tile_h, grid_pen)
+
+        self.lbl_info.setText(self.t("image_loaded", width=width, height=height, cols=cols, rows=rows))
 
     def generate_polygons(self):
         if self.cv_img is None:
@@ -314,15 +346,19 @@ class MainWindow(QMainWindow):
 
         tile_width = self.spin_width.value()
         tile_height = self.spin_height.value()
+        margin = self.spin_margin.value()
+        spacing = self.spin_spacing.value()
         alpha_thresh = self.spin_thresh.value()
 
         img_height, img_width = self.cv_img.shape[:2]
-        cols = img_width // tile_width
-        rows = img_height // tile_height
+        cols = max(0, (img_width - margin + spacing) // (tile_width + spacing)) if (tile_width + spacing) > 0 else 0
+        rows = max(0, (img_height - margin + spacing) // (tile_height + spacing)) if (tile_height + spacing) > 0 else 0
 
         self.polygon_data = {
             "tileset_name": os.path.basename(self.image_path),
             "tile_size": {"width": tile_width, "height": tile_height},
+            "margin": margin,
+            "spacing": spacing,
             "frames": []
         }
 
@@ -334,8 +370,8 @@ class MainWindow(QMainWindow):
 
         for r in range(rows):
             for c in range(cols):
-                start_x = c * tile_width
-                start_y = r * tile_height
+                start_x = margin + c * (tile_width + spacing)
+                start_y = margin + r * (tile_height + spacing)
 
                 frame = self.cv_img[start_y:start_y+tile_height, start_x:start_x+tile_width]
                 alpha_channel = frame[:, :, 3]
