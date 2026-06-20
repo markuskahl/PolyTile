@@ -4,6 +4,8 @@
 
 By analyzing the alpha (transparency) channel of your PNG images, PolyTile automatically detects the contour of each tile, simplifies it into a polygon, and exports the data to a clean JSON structure ready to be used in game engines (such as Godot, Unity, Defold, or custom engines).
 
+![PolyTile Screenshot](Screenshot.png)
+
 ---
 
 ## Features
