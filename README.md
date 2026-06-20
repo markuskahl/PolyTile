@@ -45,6 +45,7 @@ Make sure you have Python 3.8+ installed.
 2. **Load a Tileset:** Click on **1. Load Tileset** and select a PNG image with transparency.
 3. **Configure Grid & Threshold:**
    - Adjust **Width** and **Height** in pixels to match your tiles.
+   - Adjust **Margin** and **Spacing** if your tileset has outer borders or empty space between tiles.
    - Adjust the **Alpha Limit** threshold (0 to 255) for contour detection.
 4. **Generate Polygons:** Click on **2. Generate Polygons** to compute and preview the collision outlines (shown in green).
 5. **Export to JSON:** Click on **3. Export as JSON** to save the collision data.
@@ -62,6 +63,8 @@ The exported JSON structure looks like this:
         "width": 32,
         "height": 32
     },
+    "margin": 0,
+    "spacing": 0,
     "frames": [
         {
             "frame_id": 0,
